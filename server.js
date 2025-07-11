@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 app.use(cors());
@@ -24,15 +24,14 @@ app.post('/pinterest-suggest', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto('https://www.pinterest.com/', { waitUntil: 'networkidle2' });
 
-    await page.type('input[name="searchBoxInput"]', keyword, { delay: 100 });
+    const keywordEncoded = encodeURIComponent(keyword);
+    await page.goto(`https://www.pinterest.com/search/pins/?q=${keywordEncoded}`, { waitUntil: 'networkidle2' });
 
-    await page.waitForTimeout(2000);
-
+    // Grab related searches instead of typeahead
     const suggestions = await page.evaluate(() => {
       const results = [];
-      document.querySelectorAll('[data-test-id="typeahead-suggestions"] li').forEach(el => {
+      document.querySelectorAll('a[data-test-id="related-searches-link"]').forEach(el => {
         const text = el.textContent.trim();
         if (text) results.push(text);
       });
