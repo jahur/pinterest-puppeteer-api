@@ -28,15 +28,12 @@ app.post('/pinterest-suggest', async (req, res) => {
     const keywordEncoded = encodeURIComponent(keyword);
     await page.goto(`https://www.pinterest.com/search/pins/?q=${keywordEncoded}`, { waitUntil: 'networkidle2' });
 
-    // Fallback selector: any link with /search/ in href
+    // Use robust selector for related searches
     const suggestions = await page.evaluate(() => {
       const results = [];
-      document.querySelectorAll('a').forEach(el => {
-        const href = el.getAttribute('href');
+      document.querySelectorAll('[data-test-id="one-bar-pill"] .Ch2').forEach(el => {
         const text = el.textContent.trim();
-        if (href && href.includes('/search/') && text) {
-          results.push(text);
-        }
+        if (text) results.push(text);
       });
       return [...new Set(results)];
     });
