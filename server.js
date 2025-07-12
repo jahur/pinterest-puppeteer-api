@@ -28,17 +28,24 @@ app.post('/pinterest-suggest', async (req, res) => {
     const keywordEncoded = encodeURIComponent(keyword);
     await page.goto(`https://www.pinterest.com/search/pins/?q=${keywordEncoded}`, { waitUntil: 'networkidle2' });
 
-    // Grab related searches instead of typeahead
+    // Fallback selector: any link with /search/ in href
     const suggestions = await page.evaluate(() => {
       const results = [];
-      document.querySelectorAll('a[data-test-id="related-searches-link"]').forEach(el => {
+      document.querySelectorAll('a').forEach(el => {
+        const href = el.getAttribute('href');
         const text = el.textContent.trim();
-        if (text) results.push(text);
+        if (href && href.includes('/search/') && text) {
+          results.push(text);
+        }
       });
-      return results;
+      return [...new Set(results)];
     });
 
     await browser.close();
+
+    if (!suggestions.length) {
+      return res.status(404).json({ error: 'No suggestions found. Try a different keyword.' });
+    }
 
     return res.json({ suggestions });
   } catch (err) {
